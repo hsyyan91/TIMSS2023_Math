@@ -689,13 +689,22 @@ print("==============================")
 print(f"Statistic: {stat:.4f}")
 print(f"p-value: {p_value:.4e}")
 
+# =============================================================================
+# Post-hoc Test
+# =============================================================================
 if p_value < 0.05:
     print("There are significant differences in the predictive performance of these models.")
-    # Post-hoc test specifically designed for Friedman test (Conover Post-hoc Test)
-    print("\n=== Conover Post-hoc Test (Friedman Post-hoc) ===")
-    friedman_posthoc = sp.posthoc_conover_friedman(pivot_df)
-    print(friedman_posthoc.round(4))
+    print("\n=== Conover Post-hoc Test ===")
+    posthoc_conover = sp.posthoc_conover_friedman(
+        pivot_df.values,
+        p_adjust='holm'
+    )
+
+    posthoc_conover.columns = pivot_df.columns
+    posthoc_conover.index = pivot_df.columns
+    print(posthoc_conover.round(4))
+
 else:
     print("There are no significant differences in the predictive performance of these models.")
-
+    
 log.close()
