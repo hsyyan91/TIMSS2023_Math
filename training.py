@@ -277,8 +277,8 @@ def run_model_pipeline(model_name, model, param_grid,
     }
 
 rf_grid = {
-    'n_estimators': [300, 350, 400, 450, 500],
-    'max_features': ['sqrt', 'log2', 0.5, 0.8],
+    'n_estimators': [300, 350, 400, 500],
+    'max_features': ['sqrt', 'log2', 0.5],
     'max_depth': [4, 6, 8, 12],
     'min_samples_split': [2, 5, 10, 20, 40],
     'min_samples_leaf': [5, 10, 20],
@@ -315,7 +315,7 @@ seeds_list = [1, 42, 123, 888, 2026]
 
 for SEED in seeds_list:
     print(f"\n###########################################")
-    print(f" 开始运行随机种子 SEED = {SEED} ")
+    print(f" Running Random SEED = {SEED} ")
     print(f"###########################################")
 
     all_best_params[SEED] = {}
