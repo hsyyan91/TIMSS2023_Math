@@ -7,8 +7,6 @@ OUTPUT_DIR = "results_2.3"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # -----------------------------------------------------------------------------
-# 双向日志输出器：保证屏幕实时显示 Print 内容的同时，同步保存每一步到 run.log
-# -----------------------------------------------------------------------------
 class Logger(object):
     def __init__(self, filename):
         self.terminal = sys.stdout
@@ -17,7 +15,7 @@ class Logger(object):
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
-        self.log.flush()  # 实时刷盘，确保每一步 print 都能即时存盘
+        self.log.flush() 
 
     def flush(self):
         self.terminal.flush()
@@ -38,7 +36,7 @@ import statistics
 import statsmodels.api as sm
 import statsmodels.stats.api as sms
 import matplotlib
-matplotlib.use('Agg')  # 设置非交互后台，禁止弹窗，直接后台绘图保存
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import scikit_posthocs as sp
 from scipy.stats import shapiro, levene
