@@ -3,7 +3,7 @@
 import os
 import sys
 
-OUTPUT_DIR = "results_2.3"
+OUTPUT_DIR = "results_2.4"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ import statistics
 import statsmodels.api as sm
 import statsmodels.stats.api as sms
 import matplotlib
-matplotlib.use('Agg') 
+matplotlib.use('Agg')  
 import matplotlib.pyplot as plt
 import scikit_posthocs as sp
 from scipy.stats import shapiro, levene
@@ -64,7 +64,6 @@ df.head()
 
 # Linguistic variables
 linguistic_vars = [
-    "ITLANG_HQ", "LCID_HQ",
     "ASBHELA", "ASDHELA",
     "ASBHENA", "ASDHENA",
     "ASBHELN", "ASDHELN",
@@ -75,7 +74,6 @@ linguistic_vars = [
 ]
 
 # Capital variables
-# I have deleted ASBH20, ASBH19, ASBH14GB, ASBH14GA, ASBH02B because they have more than 50% missing values
 capital_vars = [
     "ASBH01A","ASBH01B","ASBH01C","ASBH01D","ASBH01E","ASBH01F","ASBH01G",
     "ASBH01H","ASBH01I","ASBH01J","ASBH01K","ASBH01L","ASBH01M","ASBH01N",
@@ -105,7 +103,7 @@ capital_vars = [
     "ASDHEDUP",
     "ASDHAPS",
 ]
-features_numeric = ["ITLANG_HQ", "LCID_HQ", "ASBHELA", "ASBHELT", "ASBHENA", "ASBHENT", "ASBHLNT", "ASBHPSP", "ASBHSES", "ASBHELN"]
+features_numeric = ["ASBHELA", "ASBHELT", "ASBHENA", "ASBHENT", "ASBHLNT", "ASBHPSP", "ASBHSES", "ASBHELN"]
 features_categorical = ["ASBH01A", "ASBH01B","ASBH01C","ASBH01D","ASBH01E","ASBH01F","ASBH01G",
     "ASBH01H","ASBH01I","ASBH01J","ASBH01K","ASBH01L","ASBH01M","ASBH01N",
     "ASBH01O","ASBH01P","ASBH01Q","ASBH01R",
@@ -216,7 +214,7 @@ for t in target:
     print(reset)
 
     # 3) Partial residual plot for one numeric feature
-    feature = features_numeric[8]
+    feature = features_numeric[7]
     beta_j = model.params[feature]
     partial_resid = resid + beta_j * X_KNN_imputed_numeric[feature]
     plt.figure(figsize=(6,4))
@@ -233,9 +231,10 @@ for t in target:
     plt.close()
 
 def run_model_pipeline(model_name, model, param_grid,
-                       X_train, X_test, y_train, y_test, w_train):
+                        X_train, X_test, y_train, y_test, w_train):
 
     scoring = {
+        'mse': 'neg_mean_squared_error',
         'rmse': 'neg_root_mean_squared_error',
         'mae': 'neg_mean_absolute_error',
         'r2': 'r2'
@@ -259,34 +258,38 @@ def run_model_pipeline(model_name, model, param_grid,
     best_model = grid.best_estimator_
     best_idx = grid.best_index_
 
-    # Train
+    # Train 
     train_pred = best_model.predict(X_train)
-    train_rmse = np.sqrt(MSE(y_train, train_pred))
+    train_mse = MSE(y_train, train_pred)
+    train_rmse = np.sqrt(train_mse)
     train_mae = mean_absolute_error(y_train, train_pred)
     train_r2 = r2_score(y_train, train_pred)
 
-    # Validation
+    # Validation 
+    cv_mse  = -grid.cv_results_['mean_test_mse'][best_idx]
     cv_rmse = -grid.cv_results_['mean_test_rmse'][best_idx]
     cv_mae  = -grid.cv_results_['mean_test_mae'][best_idx]
     cv_r2   =  grid.cv_results_['mean_test_r2'][best_idx]
 
-    # Test
+    # Test 
     test_pred = best_model.predict(X_test)
-    test_rmse = np.sqrt(MSE(y_test, test_pred))
+    test_mse = MSE(y_test, test_pred)
+    test_rmse = np.sqrt(test_mse)
     test_mae = mean_absolute_error(y_test, test_pred)
     test_r2 = r2_score(y_test, test_pred)
 
     # Feature importance
+    importances = None
     if hasattr(best_model, "feature_importances_"):
         importances = pd.Series(best_model.feature_importances_, index=X_train.columns)
     elif hasattr(best_model, "coef_"):
         importances = pd.Series(best_model.coef_, index=X_train.columns)
-
+        
     return {
         "results": {
-            "Train": (train_rmse, train_mae, train_r2),
-            "Validation": (cv_rmse, cv_mae, cv_r2),
-            "Test": (test_rmse, test_mae, test_r2)
+            "Train": (train_mse, train_rmse, train_mae, train_r2),
+            "Validation": (cv_mse, cv_rmse, cv_mae, cv_r2),
+            "Test": (test_mse, test_rmse, test_mae, test_r2)
         },
         "best_params": grid.best_params_,
         "feature_importances": importances
@@ -294,11 +297,9 @@ def run_model_pipeline(model_name, model, param_grid,
 
 rf_grid = {
     'n_estimators': [200, 350, 400],
-    'max_features': ['sqrt'],
+    'max_features': ['sqrt', 'log2', 0.5, 0.8],
     'max_depth': [4, 6, 8],
-    #'min_samples_split': [10, 20, 40],
     'min_samples_leaf': [5, 10, 20],
-    #'max_samples': [0.7, 0.8, 1]
 }
 
 xgb_grid = {
@@ -307,7 +308,6 @@ xgb_grid = {
     'max_depth': [2, 3, 4],
     'subsample': [0.6, 0.7, 0.8],
     'colsample_bytree': [0.3, 0.5, 0.7],
-    #'reg_lambda': [1, 5, 10]
 }
 
 lgbm_grid = {
@@ -349,7 +349,6 @@ for SEED in seeds_list:
         X_train_scaled[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
         X_test_scaled[numeric_cols] = scaler.transform(X_test[numeric_cols])
 
-        # Use a nested structure to prevent data from being overwritten by the next round of SEED
         all_best_params[SEED][target] = {}
         all_feature_importances[SEED][target] = {}
 
@@ -360,8 +359,8 @@ for SEED in seeds_list:
             rf_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
-        for split, (rmse, mae, r2) in rf_out["results"].items():
-            all_results.append([SEED, target, "RandomForest", split, rmse, mae, r2])
+        for split, (mse, rmse, mae, r2) in rf_out["results"].items():
+            all_results.append([SEED, target, "RandomForest", split, mse, rmse, mae, r2])
         all_best_params[SEED][target]["RandomForest"] = rf_out["best_params"]
         all_feature_importances[SEED][target]["RandomForest"] = rf_out["feature_importances"]
 
@@ -372,8 +371,8 @@ for SEED in seeds_list:
             xgb_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
-        for split, (rmse, mae, r2) in xgb_out["results"].items():
-            all_results.append([SEED, target, "XGBoost", split, rmse, mae, r2])
+        for split, (mse, rmse, mae, r2) in xgb_out["results"].items():
+            all_results.append([SEED, target, "XGBoost", split, mse, rmse, mae, r2])
         all_best_params[SEED][target]["XGBoost"] = xgb_out["best_params"]
         all_feature_importances[SEED][target]["XGBoost"] = xgb_out["feature_importances"]
 
@@ -384,8 +383,8 @@ for SEED in seeds_list:
             lgbm_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
-        for split, (rmse, mae, r2) in lgbm_out["results"].items():
-            all_results.append([SEED, target, "LightGBM", split, rmse, mae, r2])
+        for split, (mse, rmse, mae, r2) in lgbm_out["results"].items():
+            all_results.append([SEED, target, "LightGBM", split, mse, rmse, mae, r2])
         all_best_params[SEED][target]["LightGBM"] = lgbm_out["best_params"]
         all_feature_importances[SEED][target]["LightGBM"] = lgbm_out["feature_importances"]
 
@@ -396,7 +395,10 @@ print("Before scaling NaN:", X_train.isna().sum().sum())
 print("After scaling NaN:", X_train_scaled.isna().sum().sum())
 print(X_train_scaled.isna().sum().sort_values(ascending=False).head(20))
 
-results_df = pd.DataFrame(all_results, columns=["SEED", "PV", "Model", "Split", "RMSE", "MAE", "R2"])
+results_df = pd.DataFrame(
+    all_results,
+    columns=["Seed", "PV", "Model", "Split", "MSE", "RMSE", "MAE", "R2"]
+)
 
 with open(f"{OUTPUT_DIR}/best_params.json", "w") as f:
     json.dump(all_best_params, f, indent=4)
@@ -405,24 +407,18 @@ print("\n=== Comprehensive Results Across PVs and Models ===")
 print(results_df.round(4).to_string(index=False))
 
 print("\n=== Best Parameters per SEED and PV ===")
-# 1. Iterate through seeds
 for seed in all_best_params:
     print(f"\n################################### Seed: {seed} ###################################")
-    # 2. Iterate through PVs under the current seed
     for pv in all_best_params[seed]:
         print(f"\n  PV: {pv}")
-        # 3. Iterate through models under the current seed and PVs
         for model in all_best_params[seed][pv]:
             print(f"    {model} : {all_best_params[seed][pv][model]}")
 
 print("\n=== Feature Importances per SEED and PV (Top 10) ===")
-# 1. Iterate through seeds
 for seed in all_feature_importances:
     print(f"\n=================================== Seed: {seed} ===================================")
-    # 2. Iterate through PVs under the current seed
     for pv in all_feature_importances[seed]:
         print(f"\n  PV: {pv}")
-        # 3. Iterate through models under the current seed and PVs
         for model in all_feature_importances[seed][pv]:
             print(f"\n    Model: {model}")
             importance_series = all_feature_importances[seed][pv][model]
@@ -434,44 +430,35 @@ for seed in all_feature_importances:
 for seed in all_feature_importances:
     for pv in all_feature_importances[seed]:
         for model in all_feature_importances[seed][pv]:
+            importance_series = all_feature_importances[seed][pv][model]
+            if isinstance(importance_series, pd.Series):
+                fi = importance_series.sort_values(ascending=False).head(10)
 
-            fi = (
-                all_feature_importances[seed][pv][model]
-                .sort_values(ascending=False)
-                .head(10)
-            )
+                plt.figure(figsize=(8,6))
+                fi.plot(kind="barh")
+                plt.title(f"Top 10 Feature Importance\nSeed={seed} | PV={pv} | Model={model}")
+                plt.gca().invert_yaxis()
+                plt.xlabel("Importance")
+                plt.tight_layout()
 
-            plt.figure(figsize=(8,6))
-            fi.plot(kind="barh")
-            plt.title(f"Top 10 Feature Importance\nSeed={seed} | PV={pv} | Model={model}")
-            plt.gca().invert_yaxis()
-            plt.xlabel("Importance")
-            plt.tight_layout()
-
-            plt.savefig(
-                f"{OUTPUT_DIR}/FI_{seed}_{pv}_{model}.png",
-                dpi=300,
-                bbox_inches="tight"
-            )
-
-            plt.close()
-
-# 1. Create DataFrame matching all 7 returned columns
-results_df = pd.DataFrame(
-    all_results,
-    columns=["Seed", "PV", "Model", "Split", "RMSE", "MAE", "R2"]
-)
+                plt.savefig(
+                    f"{OUTPUT_DIR}/FI_{seed}_{pv}_{model}.png",
+                    dpi=300,
+                    bbox_inches="tight"
+                )
+                plt.close()
 
 results_df.to_csv(
     f"{OUTPUT_DIR}/results.csv",
     index=False
 )
 
-# 2. Aggregate Mean & STD by PV, Model, and Split
 summary_mean_std = (
     results_df
     .groupby(["PV", "Model", "Split"], as_index=False)
     .agg(
+        MSE_mean=("MSE", "mean"),
+        MSE_std=("MSE", "std"),
         RMSE_mean=("RMSE", "mean"),
         RMSE_std=("RMSE", "std"),
         MAE_mean=("MAE", "mean"),
@@ -486,7 +473,7 @@ summary_mean_std.to_csv(
     index=False
 )
 
-# 3. Set custom ordering for Split
+# Set custom ordering for Split
 split_order = pd.CategoricalDtype(["Train", "Validation", "Test"], ordered=True)
 summary_mean_std["Split"] = summary_mean_std["Split"].astype(split_order)
 summary_mean_std = summary_mean_std.sort_values(["PV", "Model", "Split"]).reset_index(drop=True)
@@ -514,7 +501,6 @@ print("LightGBM Test RMSE / SD(y_test):", rmse_lgbm_test / std_test)
 # Normality & Variance Tests (Shapiro–Wilk & Levene)
 # =============================================================================
 
-# Populate data dictionary dynamically from results_df
 data = {}
 for model_name in results_df["Model"].unique():
     data[model_name] = {
@@ -522,11 +508,6 @@ for model_name in results_df["Model"].unique():
         "val":   results_df[(results_df["Model"] == model_name) & (results_df["Split"] == "Validation")]["RMSE"].tolist(),
         "test":  results_df[(results_df["Model"] == model_name) & (results_df["Split"] == "Test")]["RMSE"].tolist()
     }
-
-# data.to_csv(
-#     f"{OUTPUT_DIR}/data.csv",
-#     index=False
-# )
 
 data_df = pd.DataFrame({
     (model, split): values
@@ -563,7 +544,6 @@ test_results.to_csv(
     index=False
 )
 
-# Reshape data matrix: (Seed, PV) serves as the repeated measurement block
 pivot_df = test_results.pivot_table(index=["Seed", "PV"], columns="Model", values="RMSE")
 
 print("\nReshaped Data Matrix (Sample):")
@@ -574,12 +554,10 @@ pivot_df.to_csv(
     index=False
 )
 
-# Extract test RMSE performance vectors for the three models
 rf_scores = pivot_df["RandomForest"].dropna().values
 xgb_scores = pivot_df["XGBoost"].dropna().values
 lgbm_scores = pivot_df["LightGBM"].dropna().values
 
-# Execute Friedman test across RF, XGBoost, and LightGBM
 stat, p_value = stats.friedmanchisquare(rf_scores, xgb_scores, lgbm_scores)
 
 print("\n==============================")
