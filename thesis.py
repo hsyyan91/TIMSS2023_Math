@@ -558,7 +558,6 @@ pivot_df.to_csv(
 # =============================================================================
 # RM-ANOVA + Post-hoc
 # =============================================================================
-OUTPUT_DIR = "results_2.4"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 data_path = f"{OUTPUT_DIR}/test_results.csv" if os.path.exists(f"{OUTPUT_DIR}/test_results.csv") else "test_results.csv"
@@ -594,9 +593,9 @@ if p_val < 0.05:
     print("\n=== 2. Post-hoc Results ===")
     print(posthoc[['A', 'B', 'T', 'dof', 'p_unc', 'p_corr', 'hedges']])
     
-    rm_anova.to_csv("results_2.4/rm_anova_results.csv", index=False)
-    posthoc.to_csv("results_2.4/posthoc_rm_anova.csv", index=False)
-    print("\saved results_2.4/")
+    rm_anova.to_csv("OUTPUT_DIR/rm_anova_results.csv", index=False)
+    posthoc.to_csv("OUTPUT_DIR/posthoc_rm_anova.csv", index=False)
+    print(f"saved to {OUTPUT_DIR}/")
 else:
     print(f"ANOVA not significant (p = {p_val:.4f} >= 0.05)")
 
