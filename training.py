@@ -280,7 +280,7 @@ rf_grid = {
     'n_estimators': [300, 350, 400, 500],
     'max_features': ['sqrt', 'log2', 0.5],
     'max_depth': [4, 6, 8, 12],
-    'min_samples_split': [2, 5, 10, 20, 40],
+    'min_samples_split': [5, 10, 20, 40],
     'min_samples_leaf': [5, 10, 20],
     'max_samples': [0.7, 0.8, 1, 5]
 }
@@ -537,9 +537,8 @@ for metric in ["train", "val", "test"]:
     check_variance(metric)
 
 # =============================================================================
-# Pivot Table & Friedman Test (Paired Non-parametric Test & Conover Post-hoc)
+# Pivot Table 
 # =============================================================================
-
 test_results = results_df[results_df["Split"] == "Test"].copy()
 
 test_results.to_csv(
@@ -547,7 +546,6 @@ test_results.to_csv(
     index=False
 )
 
-# Reshape data matrix: (Seed, PV) serves as the repeated measurement block
 pivot_df = test_results.pivot_table(index=["Seed", "PV"], columns="Model", values="RMSE")
 
 print("\nReshaped Data Matrix (Sample):")
@@ -558,41 +556,48 @@ pivot_df.to_csv(
     index=False
 )
 
-# Extract test RMSE performance vectors for the three models
-rf_scores = pivot_df["RandomForest"].dropna().values
-xgb_scores = pivot_df["XGBoost"].dropna().values
-lgbm_scores = pivot_df["LightGBM"].dropna().values
-
-# Execute Friedman test across RF, XGBoost, and LightGBM
-stat, p_value = stats.friedmanchisquare(rf_scores, xgb_scores, lgbm_scores)
-
-print("\n==============================")
-print("Friedman Test Result")
-print("==============================")
-print(f"Statistic: {stat:.4f}")
-print(f"p-value: {p_value:.4e}")
-
 # =============================================================================
-# Post-hoc Test
+# RM-ANOVA + Post-hoc
 # =============================================================================
-if p_value < 0.05:
-    print("There are significant differences in the predictive performance of these models.")
-    print("\n=== Conover Post-hoc Test ===")
-    posthoc_conover = sp.posthoc_conover_friedman(
-        pivot_df.values,
-        p_adjust='holm'
-    )
+OUTPUT_DIR = "results_2.4"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    posthoc_conover.columns = pivot_df.columns
-    posthoc_conover.index = pivot_df.columns
-    print(posthoc_conover.round(4))
+data_path = f"{OUTPUT_DIR}/test_results.csv" if os.path.exists(f"{OUTPUT_DIR}/test_results.csv") else "test_results.csv"
+df = pd.read_csv(data_path)
+
+df['Subject'] = df['Seed'].astype(str) + "_" + df['PV']
+
+print("=== 1. Repeated Measures ANOVA ===")
+rm_anova = pg.rm_anova(
+    data=df, 
+    dv='RMSE', 
+    within='Model', 
+    subject='Subject', 
+    detailed=True
+)
+print(rm_anova.round(4))
+
+p_val = rm_anova.loc[0, 'p_unc']
+
+print("\n" + "="*40)
+
+if p_val < 0.05:
+    print(f"ANOVA significant (p = {p_val:.4e} < 0.05)")
     
-    posthoc_conover.to_csv(
-        f"{OUTPUT_DIR}/posthoc_conover.csv",
-        index=True
+    posthoc = pg.pairwise_tests(
+        data=df, 
+        dv='RMSE', 
+        within='Model', 
+        subject='Subject', 
+        padjust='holm',
     )
-
+    print("\n=== 2. Post-hoc Results ===")
+    print(posthoc[['A', 'B', 'T', 'dof', 'p_unc', 'p_corr', 'hedges']])
+    
+    rm_anova.to_csv("results_2.4/rm_anova_results.csv", index=False)
+    posthoc.to_csv("results_2.4/posthoc_rm_anova.csv", index=False)
+    print("\saved results_2.4/")
 else:
-    print("There are no significant differences in the predictive performance of these models.")
+    print(f"ANOVA not significant (p = {p_val:.4f} >= 0.05)")
     
 log.close()
