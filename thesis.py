@@ -593,8 +593,9 @@ if p_val < 0.05:
     print("\n=== 2. Post-hoc Results ===")
     print(posthoc[['A', 'B', 'T', 'dof', 'p_unc', 'p_corr', 'hedges']])
     
-    rm_anova.to_csv("OUTPUT_DIR/rm_anova_results.csv", index=False)
-    posthoc.to_csv("OUTPUT_DIR/posthoc_rm_anova.csv", index=False)
+    rm_anova.to_csv(f"{OUTPUT_DIR}/rm_anova_results.csv", index=False)
+    posthoc.to_csv(f"{OUTPUT_DIR}/posthoc_rm_anova.csv", index=False)
+    
     print(f"saved to {OUTPUT_DIR}/")
 else:
     print(f"ANOVA not significant (p = {p_val:.4f} >= 0.05)")
