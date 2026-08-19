@@ -24,7 +24,8 @@ class Logger(object):
     def close(self):
         self.log.close()
 
-sys.stdout = Logger(f"{OUTPUT_DIR}/run.log")
+logger = Logger(f"{OUTPUT_DIR}/run.log")
+sys.stdout = logger
 
 # =============================================================================
 # 0. Imports
@@ -600,4 +601,5 @@ if p_val < 0.05:
 else:
     print(f"ANOVA not significant (p = {p_val:.4f} >= 0.05)")
 
-sys.stdout.close()
+sys.stdout = logger.terminal
+logger.close()
