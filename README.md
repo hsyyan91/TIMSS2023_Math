@@ -20,7 +20,8 @@ To install all dependencies, run:
 ```bash
 pip install pandas==2.3.2 numpy==2.3.2 scikit-learn==1.9.0 scipy==1.18.0 xgboost==3.4.0 lightgbm==4.7.0 matplotlib==3.11.1 seaborn==0.13.2
 
-## Citation
+Citation
+
 If you use this code or dataset in your research, please cite this repository:
 
 @misc{TIMSS2023_Math,
@@ -31,3 +32,11 @@ If you use this code or dataset in your research, please cite this repository:
   journal = {GitHub repository},
   howpublished = {\url{[https://github.com/your-username/TIMSS2023_Math](https://github.com/hsyyan91/TIMSS2023_Math)}}
 }
+
+Disclaimer
+
+This repository is for academic research and educational purposes only.
+
+The code and analyses are provided "as is", without warranty of any kind, express or implied.
+
+The author is not responsible for any issues, errors, or consequences resulting from the use of this code or data.
