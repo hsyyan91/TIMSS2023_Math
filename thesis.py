@@ -357,7 +357,7 @@ for SEED in seeds_list:
         # RF
         rf_out = run_model_pipeline(
             "RandomForest",
-            RandomForestRegressor(random_state=SEED),
+            RandomForestRegressor(random_state=SEED, n_jobs=1),
             rf_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
@@ -369,7 +369,7 @@ for SEED in seeds_list:
         # XGB
         xgb_out = run_model_pipeline(
             "XGBoost",
-            XGBRegressor(objective='reg:squarederror', random_state=SEED, eval_metric="rmse"),
+            XGBRegressor(objective='reg:squarederror', random_state=SEED, eval_metric="rmse", n_jobs=1),
             xgb_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
@@ -381,7 +381,7 @@ for SEED in seeds_list:
         # LGBM
         lgbm_out = run_model_pipeline(
             "LightGBM",
-            LGBMRegressor(objective='regression', random_state=SEED),
+            LGBMRegressor(objective='regression', random_state=SEED, n_jobs=1),
             lgbm_grid,
             X_train_scaled, X_test_scaled, y_train, y_test, w_train
         )
